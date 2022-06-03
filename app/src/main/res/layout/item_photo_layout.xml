@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="186dp"
+    android:layout_margin="8dp"
+    android:layout_height="256dp">
+
+    <androidx.constraintlayout.utils.widget.ImageFilterView
+        android:id="@+id/photo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        tools:src="@drawable/ic_baseline_monochrome_photos_24"
+        />
+
+</com.google.android.material.card.MaterialCardView>
