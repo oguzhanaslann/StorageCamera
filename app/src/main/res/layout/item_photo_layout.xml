@@ -2,15 +2,33 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="186dp"
-    android:layout_margin="8dp"
-    android:layout_height="256dp">
+    android:layout_height="256dp"
+    android:layout_margin="8dp">
 
-    <androidx.constraintlayout.utils.widget.ImageFilterView
-        android:id="@+id/photo"
+
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        tools:src="@drawable/ic_baseline_monochrome_photos_24"
-        />
+        android:layout_height="match_parent">
+
+        <androidx.constraintlayout.utils.widget.ImageFilterView
+            android:id="@+id/photo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            tools:src="@drawable/ic_baseline_monochrome_photos_24" />
+
+
+        <ImageView
+            android:id="@+id/photo_check_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:src="@drawable/ic_baseline_check_circle_24"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </FrameLayout>
 
 </com.google.android.material.card.MaterialCardView>

@@ -10,19 +10,26 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ActionMode
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.oguzhanaslann.storagecamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.*
@@ -32,9 +39,6 @@ class MainActivity : AppCompatActivity() {
     private val mainViewModel: MainViewModel by viewModels()
 
     private lateinit var binding: ActivityMainBinding
-
-    private var readPermissionGranted = false
-    private var writePermissionGranted = false
 
     private lateinit var permissionsLauncher: ActivityResultLauncher<Array<String>>
 
@@ -121,6 +125,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var actionMode: ActionMode? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -133,8 +139,12 @@ class MainActivity : AppCompatActivity() {
             takePicturePreview.launch(null)
         }
 
-        binding.content.viewPager.adapter = pagerAdapter
+        binding.fabPermission.setOnClickListener {
+            requestPermissionsIfNeeded()
+        }
 
+
+        binding.content.viewPager.adapter = pagerAdapter
 
         TabLayoutMediator(
             binding.content.tabLayout,
@@ -145,24 +155,97 @@ class MainActivity : AppCompatActivity() {
                 1 -> "Scoped"
                 else -> "Unknown"
             }
+
         }.attach()
 
 
         permissionsLauncher =
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-                readPermissionGranted =
-                    permissions[Manifest.permission.READ_EXTERNAL_STORAGE] ?: readPermissionGranted
-                writePermissionGranted = permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE]
-                    ?: writePermissionGranted
+                updatePermissionsStatus()
             }
 
-        updateOrRequestPermissions()
+
+        subscribeObservers()
+    }
+
+    val callback = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode?, menu: Menu?): Boolean {
+            binding.toolbar.isHidden = true
+            menuInflater.inflate(R.menu.contextual_action_bar, menu)
+            mode?.title = "Selected ${binding.content.viewPager.currentItem}"
+
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode?, menu: Menu?): Boolean {
+            return false
+        }
+
+        override fun onActionItemClicked(mode: ActionMode?, item: MenuItem?): Boolean {
+            return when (item?.itemId) {
+                R.id.action_delete -> {
+                    mainViewModel.deleteSelectedPhotos()
+                    true
+                }
+                else -> false
+            }
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode?) {
+            binding.toolbar.isHidden = false
+            mainViewModel.deactivateDeleteMode()
+        }
+    }
+
+    private fun subscribeObservers() {
+        lifecycleScope.launch {
+            mainViewModel.shouldRequestPermission
+                .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+                .collect {
+                    binding.fabPermission.isVisible = it
+                }
+        }
 
 
+        lifecycleScope.launch {
+            mainViewModel.deleteMode
+                .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+                .collect {
+                    binding.fab.isVisible = !it
+                    binding.fabPermission.isVisible = !it
+                    if (it) {
+                        actionMode = startSupportActionMode(callback)
+                    } else {
+                        actionMode?.finish()
+                        actionMode = null
+                    }
+                }
+        }
+
+        lifecycleScope.launch {
+            mainViewModel.selectedPhotos
+                .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+                .collect {
+                    if (it.isEmpty()) {
+                        actionMode?.finish()
+                        actionMode = null
+                    } else {
+                        actionMode?.title = "Selected ${it.size}"
+                    }
+                }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.e("TAG", "onResume: ")
+        updatePermissionsStatus()
+        mainViewModel.sendEvent(MainViewModel.StorageEvent.InternalStorageUpdated)
+        mainViewModel.sendEvent(MainViewModel.StorageEvent.ScopeStorageUpdated)
     }
 
 
-    private fun updateOrRequestPermissions() {
+    private fun updatePermissionsStatus() {
         val hasReadPermission = ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.READ_EXTERNAL_STORAGE
@@ -171,10 +254,26 @@ class MainActivity : AppCompatActivity() {
             this,
             Manifest.permission.WRITE_EXTERNAL_STORAGE
         ) == PackageManager.PERMISSION_GRANTED
+
         val minSdk29 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
-        readPermissionGranted = hasReadPermission
-        writePermissionGranted = hasWritePermission || minSdk29
+        mainViewModel.setPermissionsGranted(hasReadPermission, hasWritePermission || minSdk29)
+    }
+
+    private fun requestPermissionsIfNeeded() {
+        val hasReadPermission = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+        val hasWritePermission = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val minSdk29 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+        val readPermissionGranted = hasReadPermission
+        val writePermissionGranted = hasWritePermission || minSdk29
 
         val permissionsToRequest = mutableListOf<String>()
         if (!writePermissionGranted) {
@@ -218,3 +317,9 @@ fun sdk29AndUp(block: () -> Uri): Uri? {
         null
     }
 }
+
+var View.isHidden: Boolean
+    get() = visibility == View.INVISIBLE
+    set(value) {
+        this.visibility = if (value) View.INVISIBLE else View.VISIBLE
+    }

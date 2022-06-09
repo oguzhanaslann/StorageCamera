@@ -4,12 +4,18 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="app/src/main/res/drawable-v24/ic_hanger_24.xml" value="0.3165" />
+        <entry key="app/src/main/res/drawable/ic_baseline_camera_24.xml" value="0.161" />
+        <entry key="app/src/main/res/drawable/ic_baseline_close_24.xml" value="0.238" />
+        <entry key="app/src/main/res/drawable/ic_baseline_delete_forever_24.xml" value="0.225" />
         <entry key="app/src/main/res/drawable/ic_baseline_monochrome_photos_24.xml" value="0.3165" />
         <entry key="app/src/main/res/drawable/ic_baseline_satellite_alt_24.xml" value="0.3165" />
-        <entry key="app/src/main/res/layout/activity_main.xml" value="0.33" />
-        <entry key="app/src/main/res/layout/content_main.xml" value="0.33" />
+        <entry key="app/src/main/res/drawable/ic_baseline_storage_24.xml" value="0.225" />
+        <entry key="app/src/main/res/layout/activity_main.xml" value="0.22" />
+        <entry key="app/src/main/res/layout/content_main.xml" value="0.18" />
         <entry key="app/src/main/res/layout/fragment_photo.xml" value="0.25" />
         <entry key="app/src/main/res/layout/item_photo_layout.xml" value="0.3875" />
+        <entry key="app/src/main/res/menu/contextual_action_bar.xml" value="0.4036458333333333" />
+        <entry key="app/src/main/res/menu/menu_main.xml" value="0.4036458333333333" />
       </map>
     </option>
   </component>
