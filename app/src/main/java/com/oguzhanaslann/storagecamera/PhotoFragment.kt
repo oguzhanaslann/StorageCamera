@@ -151,33 +151,45 @@ class PhotoFragment : Fragment(R.layout.fragment_photo) {
     private suspend fun deletePhotoFromScopedStorage(photoUri: Uri) {
         withContext(Dispatchers.IO) {
             context?.run {
-                try {
+
+                val deletion = runCatching {
                     contentResolver.delete(photoUri, null, null)
-                } catch (e: SecurityException) {
-                    val intentSender = when {
-                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
-                            MediaStore.createDeleteRequest(
-                                contentResolver,
-                                listOf(photoUri)
-                            ).intentSender
+                }
+
+                deletion.onFailure {
+                    if (it is SecurityException) {
+                        val intentSender = when {
+                            aboveAndroid11() -> {
+                                MediaStore.createDeleteRequest(
+                                    contentResolver,
+                                    listOf(photoUri)
+                                ).intentSender
+                            }
+
+                            aboveAndroid10() -> {
+                                val recoverableSecurityException =
+                                    it as? RecoverableSecurityException
+                                recoverableSecurityException?.userAction?.actionIntent?.intentSender
+                            }
+
+                            else -> null
                         }
-                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-                            val recoverableSecurityException = e as? RecoverableSecurityException
-                            recoverableSecurityException?.userAction?.actionIntent?.intentSender
-                        }
-                        else -> null
-                    }
 
 
-                    intentSender?.let { sender ->
-                        intentSenderLauncher.launch(
-                            IntentSenderRequest.Builder(sender).build()
-                        )
+                        intentSender?.let { sender ->
+                            intentSenderLauncher.launch(
+                                IntentSenderRequest.Builder(sender).build()
+                            )
+                        }
                     }
                 }
             }
         }
     }
+
+    private fun aboveAndroid10() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+    private fun aboveAndroid11() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
     private fun deletePhotoIfInternalStorage(photo: Photo) {
         if (storageType == StorageType.Internal) {
